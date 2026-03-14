@@ -10,12 +10,15 @@ export default {
        run: async (sock, msg, args, config) => {
     const from = msg.key.remoteJid;
     
-    // AMBIL SENDER DENGAN BENAR (Di grup maupun pribadi)
-    const sender = msg.key.participant || msg.key.remoteJid;
-    
-    // CEK APAKAH NOMOR OWNER ADA DI DALAM SENDER
-    const isOwner = sender.includes(config.ownerNumber);
+    //LOGIKA CEK OWNER (SUPPORT LID & PHONE) ---
+const sender = msg.key.participant || msg.key.remoteJid || "";
+const isOwner = sender.includes(config.ownerNumber) || sender.includes(config.ownerLid);
 
+if (!isOwner) {
+    return sock.sendMessage(from, { 
+        text: `❌ Fitur ini hanya untuk Owner!\n\nID Kamu: ${sender}` 
+    }, { quoted: msg });
+}
     if (!isOwner) {
         return sock.sendMessage(from, { text: "❌ Fitur ini hanya untuk Owner!" }, { quoted: msg });
     }}
