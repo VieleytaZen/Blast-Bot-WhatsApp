@@ -79,6 +79,19 @@ async function startBot() {
                 m.message.viewOnceMessageV2?.message?.videoMessage?.caption ||
                 ""
             ).trim();
+            if (m.key.fromMe) {
+                // Jika pesan dari bot sendiri, gunakan body yang sudah diambil
+
+                body = (m.message.conversation ||
+                m.message.extendedTextMessage?.text ||
+                m.message.quotedMessage?.conversation ||
+                m.message.quotedMessage?.extendedTextMessage?.text ||
+                m.message.imageMessage?.caption ||
+                m.message.videoMessage?.caption ||
+                m.message.viewOnceMessageV2?.message?.imageMessage?.caption ||
+                m.message.viewOnceMessageV2?.message?.videoMessage?.caption ||
+                "").trim();
+            }
 
             if (body) {
                 console.log(`📩 Pesan Masuk: [${body}]`);
