@@ -1,5 +1,5 @@
-// plugins/jpm-id.js
 import { db } from '../database.js';
+
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export default {
@@ -7,21 +7,16 @@ export default {
     run: async (sock, msg, args, config) => {
         const from = msg.key.remoteJid;
 
-        // 1. Logika Cek Owner (Mendukung di dalam Grup & Privat)
-        run: async (sock, msg, args, config) => {
-    const from = msg.key.remoteJid;
-    
-    // AMBIL SENDER DENGAN BENAR (Di grup maupun pribadi)
-    const sender = msg.key.participant || msg.key.remoteJid;
-    
-    // CEK APAKAH NOMOR OWNER ADA DI DALAM SENDER
-    const isOwner = sender.includes(config.ownerNumber);
+        // --- 1. LOGIKA CEK OWNER (YG BENAR) ---
+        const sender = msg.key.participant || msg.key.remoteJid;
+        const isOwner = sender.includes(config.ownerNumber);
 
-    if (!isOwner) {
-        return sock.sendMessage(from, { text: "❌ Fitur ini hanya untuk Owner!" }, { quoted: msg });
-    }}  
+        if (!isOwner) {
+            return sock.sendMessage(from, { text: "❌ Fitur ini hanya untuk Owner!" }, { quoted: msg });
+        }
+        // --------------------------------------
 
-        // 2. Validasi Input (Format: .jpmid ID_GRUP | PESAN)
+        // 2. Validasi Input
         if (!args.includes('|')) {
             return sock.sendMessage(from, { 
                 text: `⚠️ *Format Salah!*\n\nGunakan:\n.jpmid ID_GRUP | PESAN\n\nContoh:\n.jpmid 120363xxx@g.us | Halo {kak|bang}, salken.` 
@@ -52,17 +47,15 @@ export default {
                 // 4. Validasi: Bukan bot sendiri & belum pernah dipush
                 if (jid !== sock.user.id && jid.endsWith('@s.whatsapp.net') && !db.isPushed(jid)) {
                     try {
-                        // Spintax (Halo|Hai)
                         const finalMsg = pesan.replace(/{([^{}]+)}/g, (m, o) => {
                             const choices = o.split('|');
                             return choices[Math.floor(Math.random() * choices.length)];
                         });
 
                         await sock.sendMessage(jid, { text: finalMsg });
-                        db.addContact(jid); // Simpan ke database
+                        db.addContact(jid); 
                         success++;
 
-                        // Jeda agar tidak kena banned
                         const wait = Math.floor(Math.random() * (config.delay.max - config.delay.min)) + config.delay.min;
                         await delay(wait);
                     } catch (e) {
