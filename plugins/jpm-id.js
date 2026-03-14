@@ -43,24 +43,41 @@ if (!isOwner) {
 
             let success = 0;
             for (let mem of participants) {
+                // Ambil ID asli (bisa berupa nomor biasa atau LID)
                 const jid = mem.id;
 
-                // 4. Validasi: Bukan bot sendiri & belum pernah dipush
-                if (jid !== sock.user.id && jid.endsWith('@s.whatsapp.net') && !db.isPushed(jid)) {
+                // 1. Cek apakah ini bot sendiri? Jika ya, lewati.
+                const isMe = jid.includes(sock.user.id.split(':')[0]);
+                if (isMe) continue;
+
+                // 2. Cek apakah nomor ini sudah pernah dichat/ada di database?
+                // Kita bersihkan dulu JID-nya agar pencarian di DB akurat
+                const cleanJid = jid.split(':')[0].split('@')[0]; 
+                
+                // Cek di database (kita buat pengecekan yang lebih fleksibel)
+                const alreadyPushed = db.isPushed(cleanJid) || db.isPushed(jid);
+
+                if (!alreadyPushed) {
                     try {
+                        // Proses Spintax
                         const finalMsg = pesan.replace(/{([^{}]+)}/g, (m, o) => {
                             const choices = o.split('|');
                             return choices[Math.floor(Math.random() * choices.length)];
                         });
 
                         await sock.sendMessage(jid, { text: finalMsg });
-                        db.addContact(jid); 
+                        
+                        // Simpan ke database (simpan keduanya agar aman)
+                        db.addContact(cleanJid); 
+                        db.addContact(jid);
+                        
                         success++;
 
+                        // Delay
                         const wait = Math.floor(Math.random() * (config.delay.max - config.delay.min)) + config.delay.min;
                         await delay(wait);
                     } catch (e) {
-                        console.log(`Gagal kirim ke ${jid}:`, e.message);
+                        console.log(`❌ Gagal kirim ke ${jid}:`, e.message);
                     }
                 }
             }
