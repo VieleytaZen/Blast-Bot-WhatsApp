@@ -17,7 +17,7 @@ const config = {
     },
 
     // --- SOSIAL MEDIA & TAMPILAN ---
-    instagramUrl: "https://instagram.com/username_kamu", // Ganti dengan link IG kamu
+    instagramUrl: "https://instagram.com/vieleyta_zen", // Ganti dengan link IG kamu
     thumbnailUrl: "https://telegra.ph/file/241f71128399589d13695.jpg", // Ganti dengan link foto/logo bot
     
     // --- KEAMANAN & LIMIT ---
