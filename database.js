@@ -1,9 +1,11 @@
 // database.js
 import fs from 'fs';
+import path from 'path';
 
-const DB_PATH = './database.json';
+// Menggunakan path absolute agar tidak error saat di-import dari folder plugins
+const DB_PATH = path.join(process.cwd(), 'database.json');
 
-// Inisialisasi file
+// Inisialisasi file jika belum ada
 if (!fs.existsSync(DB_PATH)) {
     fs.writeFileSync(DB_PATH, JSON.stringify({ 
         pushedContacts: [], 
@@ -12,43 +14,51 @@ if (!fs.existsSync(DB_PATH)) {
 }
 
 export const db = {
-    // 1. buat baca data dari file JSON
+    // Fungsi internal untuk menulis data
+    _write(data) {
+        fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2));
+    },
+
     read() {
-        return JSON.parse(fs.readFileSync(DB_PATH));
+        try {
+            return JSON.parse(fs.readFileSync(DB_PATH, 'utf-8'));
+        } catch (e) {
+            return { pushedContacts: [], exportedContacts: [] };
+        }
     },
     
-    // 2. buat fungsi untuk menambahkan nomor yang sudah di-push ke dalam database
     addContact(jid) {
         const data = this.read();
         if (!data.pushedContacts.includes(jid)) {
             data.pushedContacts.push(jid);
-            fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2));
+            this._write(data);
         }
     },
 
-    // 3. buat tanda biar ga ke ekspor nomornya, biar ga ke double export
     markAsExported(jid) {
         const data = this.read();
         if (!data.exportedContacts.includes(jid)) {
             data.exportedContacts.push(jid);
-            fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2));
+            this._write(data);
         }
     },
 
-    // 4. Fungsi Cek Status
     isPushed(jid) {
         return this.read().pushedContacts.includes(jid);
     },
 
-    isExported(jid) {
-        return this.read().exportedContacts.includes(jid);
-    },
-
-    // 5. LETAKKAN KODE BARU DI SINI (clearExport)
     clearExport() {
         const data = this.read();
-        data.exportedContacts = []; // Mengosongkan daftar ekspor
-        fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2));
+        data.exportedContacts = [];
+        this._write(data);
+        return true;
+    },
+
+    // Tambahan: Untuk mengosongkan semua daftar push
+    resetPushed() {
+        const data = this.read();
+        data.pushedContacts = [];
+        this._write(data);
         return true;
     }
 };

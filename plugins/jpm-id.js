@@ -8,87 +8,76 @@ export default {
     run: async (sock, msg, args, config) => {
         const from = msg.key.remoteJid;
 
-        // --- 1. LOGIKA CEK OWNER ---
+        // 1. Logika Cek Owner
         const sender = msg.key.participant || msg.key.remoteJid || "";
         const isOwner = sender.includes(config.ownerNumber) || sender.includes(config.ownerLid);
 
         if (!isOwner) {
             return sock.sendMessage(from, { 
-                text: `❌ Fitur ini hanya untuk Owner!\n\nID Kamu: ${sender}` 
+                text: `❌ Fitur ini hanya untuk Owner!` 
             }, { quoted: msg });
         }
 
         // 2. Validasi Input
         if (!args.includes('|')) {
             return sock.sendMessage(from, { 
-                text: `⚠️ *Format Salah!*\n\nGunakan:\n.jpmid ID_GRUP | PESAN` 
+                text: `⚠️ *Format Salah!*\nGunakan: .jpmid ID_GRUP | PESAN` 
             }, { quoted: msg });
         }
 
         const [targetId, ...pesanArray] = args.split('|');
         const targetIdTrimmed = targetId.trim();
-        const pesan = pesanArray.join('|').trim();
-
-        if (!targetIdTrimmed || !pesan) {
-            return sock.sendMessage(from, { text: "⚠️ ID Grup atau Pesan tidak boleh kosong!" });
-        }
+        const pesanRaw = pesanArray.join('|').trim();
 
         try {
             // 3. Ambil Metadata Grup
             const metadata = await sock.groupMetadata(targetIdTrimmed).catch(() => null);
-            
-            if (!metadata) {
-                return sock.sendMessage(from, { text: "❌ Gagal mendapatkan data grup. Pastikan ID benar." });
-            }
+            if (!metadata) return sock.sendMessage(from, { text: "❌ ID Grup tidak valid!" });
 
             const participants = metadata.participants || [];
-
+            
             await sock.sendMessage(from, { 
-                text: `🚀 *Memulai Push Kontak (Mode Paksa)*\n\nTarget: ${metadata.subject}\nTotal Anggota: ${participants.length}\n\n_Catatan: Pengecekan database dimatikan. Semua anggota akan dichat._` 
+                text: `🚀 *Memulai Push*\nTarget: ${metadata.subject}\nTotal: ${participants.length} anggota.` 
             });
 
             let success = 0;
 
             for (let participant of participants) {
-    let jid = participant.id;
+                const jid = participant.id;
 
-    // Filter diri sendiri
-    const isMe = jid.includes(sock.user.id.split(':')[0]);
-    if (isMe) continue;
+                // Filter: Bukan diri sendiri & Belum pernah di-push
+                const isMe = jid.includes(sock.user.id.split(':')[0]);
+                if (isMe || db.isPushed(jid)) continue; 
 
-    try {
-        // --- PROSES KIRIM PESAN ---
-        const finalMsg = pesan.replace(/{([^{}]+)}/g, (m, o) => {
-            const choices = o.split('|');
-            return choices[Math.floor(Math.random() * choices.length)];
-        });
+                try {
+                    // Spintax Processing
+                    const finalMsg = pesanRaw.replace(/{([^{}]+)}/g, (m, o) => {
+                        const choices = o.split('|');
+                        return choices[Math.floor(Math.random() * choices.length)];
+                    });
 
-        await sock.sendMessage(jid, { text: finalMsg });
+                    await sock.sendMessage(jid, { text: finalMsg });
+                    
+                    // Simpan ke Database
+                    db.addContact(jid); 
 
-        // --- LOGIKA SIMPAN KE DB (NOMOR + LID) ---
-        // Kita simpan JID apa adanya ke database
-        // Jika JID mengandung @lid, dia tersimpan sebagai LID
-        // Jika mengandung @s.whatsapp.net, dia tersimpan sebagai nomor biasa
-        db.addContact(jid); 
+                    success++;
+                    console.log(`✅ Push Berhasil: ${jid}`);
 
-        success++;
-        console.log(`✅ Berhasil: ${jid}`);
-
-        await delay(3000); 
-    } catch (e) {
-        console.log(`❌ Gagal: ${jid}`);
-    }
-}
+                    // Delay Random agar lebih aman (3-6 detik)
+                    await delay(Math.floor(Math.random() * 3000) + 3000); 
+                } catch (e) {
+                    console.log(`❌ Gagal kirim ke: ${jid}`);
+                }
+            }
 
             await sock.sendMessage(from, { 
-                text: `✅ *Push Selesai!*\n\nBerhasil kirim ke: ${success} nomor.\nGrup: ${metadata.subject}` 
+                text: `✅ *Push Selesai!*\nBerhasil kirim ke: ${success} nomor baru.\nGrup: ${metadata.subject}` 
             }, { quoted: msg });
 
         } catch (err) {
             console.error(err);
-            await sock.sendMessage(from, { 
-                text: `❌ *Error Terjadi!*` 
-            });
+            await sock.sendMessage(from, { text: `❌ Terjadi kesalahan sistem.` });
         }
     }
 };
