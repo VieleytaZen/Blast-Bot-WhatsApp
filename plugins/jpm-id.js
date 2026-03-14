@@ -58,7 +58,7 @@ export default {
                 if (isMe) continue;
 
                 // 2. Cek Database (Hanya kirim jika belum pernah dipush)
-                if (!db.isPushed(jid)) {
+                /*if (!db.isPushed(jid)) {
                     try {
                         // Fitur Spintax sederhana {Halo|Hai}
                         const finalMsg = pesan.replace(/{([^{}]+)}/g, (m, o) => {
@@ -79,7 +79,7 @@ export default {
                     } catch (e) {
                         console.log(`❌ Gagal kirim ke ${jid}:`, e.message);
                     }
-                }
+                }*/
             }
 
             await sock.sendMessage(from, { 
