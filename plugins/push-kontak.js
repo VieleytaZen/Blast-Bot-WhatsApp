@@ -8,16 +8,19 @@ export default {
     run: async (sock, msg, args, config) => {
         const from = msg.key.remoteJid;
 
-        // 1. Ambil ID pengirim asli (baik di grup maupun pribadi)
-        const sender = msg.key.participant || msg.key.remoteJid;
-        
-        // 2. Cek apakah ID tersebut mengandung nomor owner dari config
-        const isOwner = sender.includes(config.ownerNumber);
+      run: async (sock, msg, args, config) => {
+    const from = msg.key.remoteJid;
+    
+    // AMBIL SENDER DENGAN BENAR (Di grup maupun pribadi)
+    const sender = msg.key.participant || msg.key.remoteJid;
+    
+    // CEK APAKAH NOMOR OWNER ADA DI DALAM SENDER
+    const isOwner = sender.includes(config.ownerNumber);
 
-        if (!isOwner) {
-            return sock.sendMessage(from, { text: "❌ Fitur ini hanya untuk Owner!" }, { quoted: msg });
+    if (!isOwner) {
+        return sock.sendMessage(from, { text: "❌ Fitur ini hanya untuk Owner!" }, { quoted: msg });
+    }
         }
-
         // 3. Validasi argumen pesan
         if (!args) {
             return sock.sendMessage(from, { text: "⚠️ *Gunakan:* .push {Halo|Hai} kak, salken ya." });

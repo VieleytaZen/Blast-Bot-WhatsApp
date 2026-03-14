@@ -7,12 +7,18 @@ export default {
         const from = msg.key.remoteJid;
         
         // 1. Logika Keamanan Owner (Mendukung di Grup & Pribadi)
-        const sender = msg.key.participant || msg.key.remoteJid;
-        const isOwner = sender.includes(config.ownerNumber);
+       run: async (sock, msg, args, config) => {
+    const from = msg.key.remoteJid;
+    
+    // AMBIL SENDER DENGAN BENAR (Di grup maupun pribadi)
+    const sender = msg.key.participant || msg.key.remoteJid;
+    
+    // CEK APAKAH NOMOR OWNER ADA DI DALAM SENDER
+    const isOwner = sender.includes(config.ownerNumber);
 
-        if (!isOwner) {
-            return sock.sendMessage(from, { text: "❌ Fitur ini hanya untuk Owner!" }, { quoted: msg });
-        }
+    if (!isOwner) {
+        return sock.sendMessage(from, { text: "❌ Fitur ini hanya untuk Owner!" }, { quoted: msg });
+    }}
 
         // 2. Mengambil argumen (misal: export)
         const type = args.toLowerCase().trim();
