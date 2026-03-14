@@ -12,7 +12,6 @@ import { pathToFileURL } from 'url';
 import config from './config.js';
 
 async function startBot() {
-    // 1. Inisialisasi Auth State
     const { state, saveCreds } = await useMultiFileAuthState(config.sessionName);
     const { version } = await fetchLatestBaileysVersion();
 
@@ -27,7 +26,6 @@ async function startBot() {
         browser: ["Ubuntu", "Chrome", "20.0.04"]
     });
 
-    // 2. Logika Pairing Code
     if (!sock.authState.creds.registered) {
         console.log(`\n\x1b[33m[!] Menyiapkan Pairing Code untuk: ${config.ownerNumber}\x1b[0m`);
         setTimeout(async () => {
@@ -42,7 +40,6 @@ async function startBot() {
 
     sock.ev.on('creds.update', saveCreds);
 
-    // 3. Handler Koneksi
     sock.ev.on('connection.update', (update) => {
         const { connection, lastDisconnect } = update;
         if (connection === 'close') {
@@ -57,20 +54,16 @@ async function startBot() {
         }
     });
 
-    // 4. Main Message Handler
     sock.ev.on('messages.upsert', async (chat) => {
         try {
             const m = chat.messages[0];
-            // PERBAIKAN: Jangan return jika m.key.fromMe agar kamu bisa tes pakai nomor bot itu sendiri
             if (!m.message) return;
 
             const from = m.key.remoteJid;
-            
-            // PERBAIKAN: Identifikasi pengirim (Grup vs PC)
-            // Di grup pakai m.key.participant, di PC pakai from
             const sender = m.key.participant || from;
 
-            const body = (
+            // Memperbaiki pengambilan teks (Body) agar mendukung pesan bot sendiri & orang lain
+            let body = (
                 m.message.conversation || 
                 m.message.extendedTextMessage?.text || 
                 m.message.imageMessage?.caption || 
@@ -79,27 +72,12 @@ async function startBot() {
                 m.message.viewOnceMessageV2?.message?.videoMessage?.caption ||
                 ""
             ).trim();
-            if (m.key.fromMe) {
-                // Jika pesan dari bot sendiri, gunakan body yang sudah diambil
 
-                body = (m.message.conversation ||
-                m.message.extendedTextMessage?.text ||
-                m.message.quotedMessage?.conversation ||
-                m.message.quotedMessage?.extendedTextMessage?.text ||
-                m.message.imageMessage?.caption ||
-                m.message.videoMessage?.caption ||
-                m.message.viewOnceMessageV2?.message?.imageMessage?.caption ||
-                m.message.viewOnceMessageV2?.message?.videoMessage?.caption ||
-                "").trim();
-            } else {
-                // Jika pesan dari orang lain, gunakan body yang sudah diambil
-                body = (m.message.conversation ||
-                m.message.extendedTextMessage?.text ||
-                m.message.imageMessage?.caption ||
-                m.message.videoMessage?.caption ||
-                m.message.viewOnceMessageV2?.message?.imageMessage?.caption ||
-                m.message.viewOnceMessageV2?.message?.videoMessage?.caption ||
-                "").trim();
+            // Tambahan jika pesan berasal dari bot sendiri (m.key.fromMe)
+            if (m.key.fromMe && !body) {
+                body = (m.message.quotedMessage?.conversation || 
+                        m.message.quotedMessage?.extendedTextMessage?.text || 
+                        "").trim();
             }
 
             if (body) {
@@ -108,18 +86,14 @@ async function startBot() {
                 console.log(`   Oleh: ${sender}`);
             }
 
+            // Hanya proses perintah yang diawali titik
             if (!body.startsWith('.')) return; 
 
             const command = body.split(' ')[0].toLowerCase();
             const args = body.split(' ').slice(1).join(' ');
 
-            // 5. Plugin Loader Dinamis
             const pluginFolder = path.join(process.cwd(), 'plugins'); 
-            
-            if (!fs.existsSync(pluginFolder)) {
-                console.log(`❌ Folder plugins tidak ditemukan di: ${pluginFolder}`);
-                return;
-            }
+            if (!fs.existsSync(pluginFolder)) return;
 
             const pluginFiles = fs.readdirSync(pluginFolder).filter(file => file.endsWith('.js'));
 
@@ -131,8 +105,6 @@ async function startBot() {
 
                     if (plugin && plugin.command && plugin.command.includes(command)) {
                         console.log(`⚡ Menjalankan: ${file} untuk perintah [${command}]`);
-                        
-                        // Menjalankan plugin dengan context yang sudah diperbaiki
                         await plugin.run(sock, m, args, config);
                         return; 
                     }
