@@ -24,7 +24,6 @@ async function startBot() {
             creds: state.creds,
             keys: makeCacheableSignalKeyStore(state.keys, pino({ level: 'silent' })),
         },
-        // Agar terdeteksi sebagai perangkat stabil di Panel
         browser: ["Ubuntu", "Chrome", "20.0.04"]
     });
 
@@ -62,9 +61,15 @@ async function startBot() {
     sock.ev.on('messages.upsert', async (chat) => {
         try {
             const m = chat.messages[0];
-            if (!m.message || m.key.fromMe) return;
+            // PERBAIKAN: Jangan return jika m.key.fromMe agar kamu bisa tes pakai nomor bot itu sendiri
+            if (!m.message) return;
 
-            // Menangani berbagai jenis struktur pesan
+            const from = m.key.remoteJid;
+            
+            // PERBAIKAN: Identifikasi pengirim (Grup vs PC)
+            // Di grup pakai m.key.participant, di PC pakai from
+            const sender = m.key.participant || from;
+
             const body = (
                 m.message.conversation || 
                 m.message.extendedTextMessage?.text || 
@@ -75,11 +80,12 @@ async function startBot() {
                 ""
             ).trim();
 
-            const from = m.key.remoteJid;
+            if (body) {
+                console.log(`📩 Pesan Masuk: [${body}]`);
+                console.log(`   Dari: ${from}`);
+                console.log(`   Oleh: ${sender}`);
+            }
 
-            if (body) console.log(`📩 Pesan Masuk: [${body}] dari ${from}`);
-
-            // Cek apakah pesan diawali prefix titik (.)
             if (!body.startsWith('.')) return; 
 
             const command = body.split(' ')[0].toLowerCase();
@@ -103,8 +109,10 @@ async function startBot() {
 
                     if (plugin && plugin.command && plugin.command.includes(command)) {
                         console.log(`⚡ Menjalankan: ${file} untuk perintah [${command}]`);
+                        
+                        // Menjalankan plugin dengan context yang sudah diperbaiki
                         await plugin.run(sock, m, args, config);
-                        return; // Berhenti jika sudah ketemu
+                        return; 
                     }
                 } catch (err) {
                     console.error(`❌ Gagal memuat plugin ${file}:`, err.message);
@@ -116,6 +124,5 @@ async function startBot() {
     });
 }
 
-// Start
 console.log('\x1b[36m[i] Memulai bot... Pastikan nomor owner di config sudah benar.\x1b[0m\n');
 startBot();
