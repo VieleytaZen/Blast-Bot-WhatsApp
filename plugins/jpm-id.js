@@ -7,7 +7,9 @@ export default {
     run: async (sock, msg, args, config) => {
         const from = msg.key.remoteJid;
         // Cara yang lebih aman untuk cek owner
-const isOwner = from.split('@')[0].includes(config.ownerNumber);
+            console.log(`ID Pengirim: ${from}`);
+            console.log(`Nomor Owner di Config: ${config.ownerNumber}`);
+        const isOwner = from.split('@')[0].includes(config.ownerNumber);
 
         // 1. Keamanan: Hanya Owner yang bisa akses
         if (!isOwner) return sock.sendMessage(from, { text: "❌ Fitur ini hanya untuk Owner!" });
