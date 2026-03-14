@@ -1,0 +1,27 @@
+{
+  "name": "bot-push-kontak-esm",
+  "version": "1.0.0",
+  "description": "Bot WhatsApp Push Kontak Modular Version",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "whatsapp",
+    "bot",
+    "baileys",
+    "esm"
+  ],
+  "author": "Viel",
+  "license": "ISC",
+  "dependencies": {
+    "@whiskeysockets/baileys": "^6.7.0",
+    "@hapi/boom": "^10.0.1",
+    "pino": "^9.0.0",
+    "qrcode-terminal": "^0.12.0",
+    "fs": "0.0.1-security",
+    "path": "^0.12.7"
+  }
+}
