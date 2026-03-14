@@ -8,7 +8,7 @@ export default {
     run: async (sock, msg, args, config) => {
         const from = msg.key.remoteJid;
 
-        // --- 1. LOGIKA CEK OWNER (FIXED) ---
+        // --- 1. LOGIKA CEK OWNER ---
         const sender = msg.key.participant || msg.key.remoteJid || "";
         const isOwner = sender.includes(config.ownerNumber) || sender.includes(config.ownerLid);
 
@@ -34,18 +34,17 @@ export default {
         }
 
         try {
-            // 3. Ambil Metadata Grup (Paksa Refresh)
-            // Menggunakan fetch karena kadang metadata cache baileys suka 0
+            // 3. Ambil Metadata Grup
             const metadata = await sock.groupMetadata(targetIdTrimmed).catch(() => null);
             
             if (!metadata) {
-                return sock.sendMessage(from, { text: "❌ Gagal mendapatkan data grup. Pastikan ID benar dan bot ada di sana." });
+                return sock.sendMessage(from, { text: "❌ Gagal mendapatkan data grup. Pastikan ID benar." });
             }
 
             const participants = metadata.participants || [];
 
             await sock.sendMessage(from, { 
-                text: `🚀 *Memulai Push Kontak*\n\nTarget: ${metadata.subject}\nTotal Anggota: ${participants.length}\n\n_Mengirim ke semua ID (termasuk LID)..._` 
+                text: `🚀 *Memulai Push Kontak (Mode Paksa)*\n\nTarget: ${metadata.subject}\nTotal Anggota: ${participants.length}\n\n_Catatan: Pengecekan database dimatikan. Semua anggota akan dichat._` 
             });
 
             let success = 0;
@@ -57,29 +56,30 @@ export default {
                 const isMe = jid.includes(sock.user.id.split(':')[0]);
                 if (isMe) continue;
 
-                // 2. Cek Database (Hanya kirim jika belum pernah dipush)
-                /*if (!db.isPushed(jid)) {
-                    try {
-                        // Fitur Spintax sederhana {Halo|Hai}
-                        const finalMsg = pesan.replace(/{([^{}]+)}/g, (m, o) => {
-                            const choices = o.split('|');
-                            return choices[Math.floor(Math.random() * choices.length)];
-                        });
+                // --- DATABASE BYPASS ---
+                // Pengecekan if (!db.isPushed(jid)) dihapus agar bot pasti mengirim pesan
+                try {
+                    // Fitur Spintax
+                    const finalMsg = pesan.replace(/{([^{}]+)}/g, (m, o) => {
+                        const choices = o.split('|');
+                        return choices[Math.floor(Math.random() * choices.length)];
+                    });
 
-                        await sock.sendMessage(jid, { text: finalMsg });
-                        
-                        // Simpan ke database agar tidak spam
-                        db.addContact(jid);
-                        success++;
+                    await sock.sendMessage(jid, { text: finalMsg });
+                    
+                    // Kita tetap simpan ke DB agar data kontak masuk untuk keperluan ekspor nanti
+                    db.addContact(jid);
+                    
+                    success++;
+                    console.log(`✅ Berhasil mengirim ke: ${jid}`);
 
-                        // --- WAJIB DELAY (Minimal 3 detik) ---
-                        // Tanpa ini, WhatsApp akan mendeteksi aktivitas bot sebagai spam
-                        await delay(3000); 
+                    // Delay acak agar lebih aman (3 - 6 detik)
+                    const wait = Math.floor(Math.random() * 3000) + 3000;
+                    await delay(wait); 
 
-                    } catch (e) {
-                        console.log(`❌ Gagal kirim ke ${jid}:`, e.message);
-                    }
-                }*/
+                } catch (e) {
+                    console.log(`❌ Gagal kirim ke ${jid}:`, e.message);
+                }
             }
 
             await sock.sendMessage(from, { 
@@ -89,7 +89,7 @@ export default {
         } catch (err) {
             console.error(err);
             await sock.sendMessage(from, { 
-                text: `❌ *Error Terjadi!*\nID Grup mungkin salah atau koneksi bermasalah.` 
+                text: `❌ *Error Terjadi!*` 
             });
         }
     }
