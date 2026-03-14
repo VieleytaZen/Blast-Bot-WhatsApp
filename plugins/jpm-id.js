@@ -1,3 +1,4 @@
+// plugins/jpm-id.js
 import { db } from '../database.js';
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -41,46 +42,29 @@ if (!isOwner) {
                 text: `🚀 *Memulai Push Kontak*\n\nTarget: ${metadata.subject}\nTotal Anggota: ${participants.length}\n\n_Bot akan melewati nomor yang sudah pernah dichat sebelumnya._` 
             });
 
-            let success = 0;
-            for (let mem of participants) {
-                // Ambil ID asli (bisa berupa nomor biasa atau LID)
-                const jid = mem.id;
+let success = 0;
+const finalMsg = pesan; // Define the message to send
 
-                // 1. Cek apakah ini bot sendiri? Jika ya, lewati.
-                const isMe = jid.includes(sock.user.id.split(':')[0]);
-                if (isMe) continue;
+for (let participant of participants) {
+    let jid = participant.id;
 
-                // 2. Cek apakah nomor ini sudah pernah dichat/ada di database?
-                // Kita bersihkan dulu JID-nya agar pencarian di DB akurat
-                const cleanJid = jid.split(':')[0].split('@')[0]; 
-                
-                // Cek di database (kita buat pengecekan yang lebih fleksibel)
-                const alreadyPushed = db.isPushed(cleanJid) || db.isPushed(jid);
+    // 1. FILTER: Hanya ambil yang berakhiran @s.whatsapp.net (Nomor Asli)
+    // Abaikan yang berakhiran @lid
+    if (jid.includes('@lid')) continue; 
 
-                if (!alreadyPushed) {
-                    try {
-                        // Proses Spintax
-                        const finalMsg = pesan.replace(/{([^{}]+)}/g, (m, o) => {
-                            const choices = o.split('|');
-                            return choices[Math.floor(Math.random() * choices.length)];
-                        });
+    // 2. Filter: Bukan diri sendiri
+    const isMe = jid.includes(sock.user.id.split(':')[0]);
+    if (isMe) continue;
 
-                        await sock.sendMessage(jid, { text: finalMsg });
-                        
-                        // Simpan ke database (simpan keduanya agar aman)
-                        db.addContact(cleanJid); 
-                        db.addContact(jid);
-                        
-                        success++;
-
-                        // Delay
-                        const wait = Math.floor(Math.random() * (config.delay.max - config.delay.min)) + config.delay.min;
-                        await delay(wait);
-                    } catch (e) {
-                        console.log(`❌ Gagal kirim ke ${jid}:`, e.message);
-                    }
-                }
-            }
+    // 3. Cek Database
+    if (!db.isPushed(jid)) {
+        try {
+            await sock.sendMessage(jid, { text: finalMsg });
+            db.addContact(jid);
+            success++;
+        } catch (e) { }
+    }
+}
 
             await sock.sendMessage(from, { 
                 text: `✅ *Push Selesai!*\n\nBerhasil kirim ke: ${success} nomor baru.\nGrup: ${metadata.subject}` 

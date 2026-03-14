@@ -37,43 +37,26 @@ export default {
                 console.log(`📂 Memproses grup: ${group.subject}`);
                 
                 for (let participant of group.participants) {
-                    // 1. Ambil ID pengirim (bisa nomor biasa atau LID)
-                    const jid = participant.id;
+    let jid = participant.id;
 
-                    // 2. Filter: Lewati jika itu adalah bot sendiri
-                    const isMe = jid.includes(sock.user.id.split(':')[0]);
-                    if (isMe) continue;
+    // 1. FILTER: Hanya ambil yang berakhiran @s.whatsapp.net (Nomor Asli)
+    // Abaikan yang berakhiran @lid
+    if (jid.includes('@lid')) continue; 
 
-                    // 3. Filter Database: Cek apakah ID ini sudah pernah di-push?
-                    // Kita cek JID asli dan juga JID yang dibersihkan (tanpa :1 dsb)
-                    const cleanJid = jid.split(':')[0] + (jid.includes('@') ? '' : '@s.whatsapp.net');
-                    
-                    if (!db.isPushed(jid) && !db.isPushed(cleanJid)) {
-                        try {
-                            // Proses Spintax
-                            const finalMsg = args.replace(/{([^{}]+)}/g, (m, o) => {
-                                const choices = o.split('|');
-                                return choices[Math.floor(Math.random() * choices.length)];
-                            });
+    // 2. Filter: Bukan diri sendiri
+    const isMe = jid.includes(sock.user.id.split(':')[0]);
+    if (isMe) continue;
 
-                            // Kirim Pesan
-                            await sock.sendMessage(jid, { text: finalMsg });
-                            
-                            // Simpan ke database
-                            db.addContact(jid);
-                            db.addContact(cleanJid); 
-                            
-                            totalPushed++;
-                            console.log(`✅ Berhasil push ke: ${jid}`);
-
-                            // Delay acak
-                            const wait = Math.floor(Math.random() * (config.delay.max - config.delay.min)) + config.delay.min;
-                            await delay(wait);
-                        } catch (e) { 
-                            console.log(`❌ Gagal kirim ke ${jid}:`, e.message); 
-                        }
-                    }
-                }
+    // 3. Cek Database
+    if (!db.isPushed(jid)) {
+        try {
+            // ... proses kirim pesan ...
+            await sock.sendMessage(jid, { text: finalMsg });
+            db.addContact(jid);
+            // ... sisa kode ...
+        } catch (e) { }
+    }
+}
             }
 
             // 7. Selesai
