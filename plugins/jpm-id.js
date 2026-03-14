@@ -7,15 +7,15 @@ export default {
     run: async (sock, msg, args, config) => {
         const from = msg.key.remoteJid;
 
-        // --- 1. LOGIKA CEK OWNER (YG BENAR) ---
-        const sender = msg.key.participant || msg.key.remoteJid;
-        const isOwner = sender.includes(config.ownerNumber);
+       // --- 1. LOGIKA CEK OWNER (VERSI ANTI GAGAL) ---
+const sender = msg.key.participant || msg.key.remoteJid || "";
+const isOwner = sender.includes(config.ownerNumber) || msg.key.remoteJid.includes(config.ownerNumber);
 
-        if (!isOwner) {
-            return sock.sendMessage(from, { text: "❌ Fitur ini hanya untuk Owner!" }, { quoted: msg });
-        }
-        // --------------------------------------
-
+if (!isOwner) {
+    // Debug: Jika tetap gagal, bot akan memberitahu siapa pengirim yang terdeteksi
+    return sock.sendMessage(from, { text: `❌ Fitur ini hanya untuk Owner!\n\nID Terdeteksi: ${sender}` }, { quoted: msg });
+}
+// ----------------------------------------------
         // 2. Validasi Input
         if (!args.includes('|')) {
             return sock.sendMessage(from, { 
