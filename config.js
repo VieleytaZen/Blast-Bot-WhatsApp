@@ -1,9 +1,8 @@
 // config.js
 
 const config = {
-    // --- INFORMASI OWNER ---
-    ownerNumber: "6282133692292", // Nomor kamu (tanpa @s.whatsapp.net)
-    ownerLid: "83227876290608",     // ID LID kamu (cek di console saat chat bot)
+    // Masukkan SEMUA ID yang muncul saat bot menolak perintah
+    owners: ["6282133692292", "83227876290608", "101352772509932"], 
     ownerName: "Kii",
     
     // --- PENGATURAN BOT ---

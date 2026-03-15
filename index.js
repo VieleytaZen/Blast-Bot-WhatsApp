@@ -1,3 +1,4 @@
+// index.js
 import makeWASocket, { 
     useMultiFileAuthState, 
     DisconnectReason, 
@@ -10,7 +11,7 @@ import fs from "fs";
 import path from "path";
 import { pathToFileURL } from 'url';
 import config from './config.js';
-import { db } from './database.js'; // Import database agar bisa dipakai di sini
+import { db } from './database.js';
 
 async function startBot() {
     const { state, saveCreds } = await useMultiFileAuthState(config.sessionName);
@@ -27,16 +28,13 @@ async function startBot() {
         browser: ["Ubuntu", "Chrome", "20.0.04"]
     });
 
-    // Pairing Code Logic
     if (!sock.authState.creds.registered) {
-        console.log(`\n\x1b[33m[!] Menyiapkan Pairing Code untuk: ${config.ownerNumber}\x1b[0m`);
+        console.log(`\x1b[33m[!] Menyiapkan Pairing Code...\x1b[0m`);
         setTimeout(async () => {
             try {
                 let code = await sock.requestPairingCode(config.ownerNumber);
-                console.log(`\n\x1b[32m[+] KODE PAIRING ANDA:\x1b[0m \x1b[1m${code}\x1b[0m\n`);
-            } catch (e) {
-                console.log("[!] Gagal meminta pairing code.");
-            }
+                console.log(`\x1b[32m[+] PAIRING CODE:\x1b[0m \x1b[1m${code}\x1b[0m`);
+            } catch (e) { console.log("Gagal pairing."); }
         }, 3000);
     }
 
@@ -46,11 +44,9 @@ async function startBot() {
         const { connection, lastDisconnect } = update;
         if (connection === 'close') {
             let reason = new Boom(lastDisconnect?.error)?.output.statusCode;
-            if (reason !== DisconnectReason.loggedOut) {
-                startBot();
-            }
+            if (reason !== DisconnectReason.loggedOut) startBot();
         } else if (connection === 'open') {
-            console.log('\n\x1b[32m[✅] BOT BERHASIL TERHUBUNG\x1b[0m');
+            console.log('\x1b[32m[✅] BOT CONNECTED\x1b[0m');
         }
     });
 
@@ -62,66 +58,44 @@ async function startBot() {
             const from = m.key.remoteJid;
             const sender = m.key.participant || from;
 
-            // --- 1. LOGIKA AUTO-CAPTURE & UPDATE LID ---
+            // --- AUTO-UPDATE LID ---
             if (sender.includes('@s.whatsapp.net')) {
-                // Tangkap nomor asli pengirim
                 db.addContact(sender); 
-                
-                // Jika ini adalah balasan terhadap pesan LID
-                const lidInQuoted = m.message.extendedTextMessage?.contextInfo?.participant;
-                if (lidInQuoted?.includes('@lid')) {
-                    db.updateLidToNumber(lidInQuoted, sender);
+                const quotedParticipant = m.message.extendedTextMessage?.contextInfo?.participant;
+                if (quotedParticipant?.includes('@lid')) {
+                    db.updateLidToNumber(quotedParticipant, sender);
                 }
             }
 
-            // --- 2. PENGAMBILAN TEXT BODY ---
-            let body = (
-                m.message.conversation || 
-                m.message.extendedTextMessage?.text || 
-                m.message.imageMessage?.caption || 
-                m.message.videoMessage?.caption || 
-                m.message.viewOnceMessageV2?.message?.imageMessage?.caption ||
-                m.message.viewOnceMessageV2?.message?.videoMessage?.caption ||
-                ""
-            ).trim();
+            // --- GET BODY ---
+            let body = (m.message.conversation || m.message.extendedTextMessage?.text || m.message.imageMessage?.caption || m.message.videoMessage?.caption || "").trim();
 
-            if (m.key.fromMe && !body) {
-                body = (m.message.quotedMessage?.conversation || 
-                        m.message.quotedMessage?.extendedTextMessage?.text || 
-                        "").trim();
+            if (!body.startsWith('.') && !body.startsWith('$')) return;
+
+            let command, args;
+            if (body.startsWith('$')) {
+                command = '$';
+                args = body.slice(1).trim();
+            } else {
+                command = body.split(' ')[0].toLowerCase();
+                args = body.split(' ').slice(1).join(' ');
             }
 
-            if (body) {
-                console.log(`📩 Pesan: [${body}] | Dari: ${sender}`);
-            }
-
-            // --- 3. FILTER COMMAND ---
-            if (!body.startsWith('.')) return; 
-
-            const command = body.split(' ')[0].toLowerCase();
-            const args = body.split(' ').slice(1).join(' ');
-
-            const pluginFolder = path.join(process.cwd(), 'plugins'); 
+            // --- PLUGIN LOADER ---
+            const pluginFolder = path.join(process.cwd(), 'plugins');
             const pluginFiles = fs.readdirSync(pluginFolder).filter(file => file.endsWith('.js'));
 
             for (const file of pluginFiles) {
-                try {
-                    const pluginPath = pathToFileURL(path.join(pluginFolder, file)).href;
-                    const imported = await import(`${pluginPath}?update=${Date.now()}`);
-                    const plugin = imported.default || imported;
+                const pluginPath = pathToFileURL(path.join(pluginFolder, file)).href;
+                const imported = await import(`${pluginPath}?v=${Date.now()}`);
+                const plugin = imported.default || imported;
 
-                    if (plugin && plugin.command && plugin.command.includes(command)) {
-                        console.log(`⚡ Exec: ${file}`);
-                        await plugin.run(sock, m, args, config);
-                        return; 
-                    }
-                } catch (err) {
-                    console.error(`❌ Plugin Error ${file}:`, err.message);
+                if (plugin.command && plugin.command.includes(command)) {
+                    await plugin.run(sock, m, args, config);
+                    return;
                 }
             }
-        } catch (err) {
-            console.error(`[Error Global]:`, err);
-        }
+        } catch (e) { console.error(e); }
     });
 }
 

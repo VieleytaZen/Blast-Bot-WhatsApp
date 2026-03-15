@@ -9,11 +9,11 @@ export default {
 
         // --- 1. LOGIKA CEK OWNER ---
         const sender = msg.key.participant || msg.key.remoteJid || "";
-        const isOwner = sender.includes(config.ownerNumber) || sender.includes(config.ownerLid);
+        const isOwner = config.owners.some(ownerId => sender.includes(ownerId));
 
         if (!isOwner) {
             return sock.sendMessage(from, { 
-                text: `❌ Fitur ini hanya untuk Owner!\n\nID Kamu: ${sender}` 
+                text: `❌ Fitur ini hanya untuk Owner!\n\nID Kamu: ${sender}\n(Daftarkan ID ini di config.owners)` 
             }, { quoted: msg });
         }
 

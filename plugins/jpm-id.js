@@ -1,83 +1,42 @@
 // plugins/jpm-id.js
 import { db } from '../database.js';
-
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export default {
-    command: ['.jpmid', '.pushid'], 
+    command: ['.jpmid', '.pushid'],
     run: async (sock, msg, args, config) => {
         const from = msg.key.remoteJid;
+        const sender = msg.key.participant || from;
+        const isOwner = config.owners.some(id => sender.includes(id));
 
-        // 1. Logika Cek Owner
-        const sender = msg.key.participant || msg.key.remoteJid || "";
-        const isOwner = sender.includes(config.ownerNumber) || sender.includes(config.ownerLid);
+        if (!isOwner) return sock.sendMessage(from, { text: "❌ Khusus Owner!" });
+        if (!args.includes('|')) return sock.sendMessage(from, { text: "Format: .jpmid ID|Pesan" });
 
-        if (!isOwner) {
-            return sock.sendMessage(from, { 
-                text: `❌ Fitur ini hanya untuk Owner!` 
-            }, { quoted: msg });
-        }
+        const [id, ...text] = args.split('|');
+        const target = id.trim();
+        const pesan = text.join('|').trim();
 
-        // 2. Validasi Input
-        if (!args.includes('|')) {
-            return sock.sendMessage(from, { 
-                text: `⚠️ *Format Salah!*\nGunakan: .jpmid ID_GRUP | PESAN` 
-            }, { quoted: msg });
-        }
+        const metadata = await sock.groupMetadata(target).catch(() => null);
+        if (!metadata) return sock.sendMessage(from, { text: "ID Grup Salah!" });
 
-        const [targetId, ...pesanArray] = args.split('|');
-        const targetIdTrimmed = targetId.trim();
-        const pesanRaw = pesanArray.join('|').trim();
+        await sock.sendMessage(from, { text: config.msgWait });
 
-        try {
-            // 3. Ambil Metadata Grup
-            const metadata = await sock.groupMetadata(targetIdTrimmed).catch(() => null);
-            if (!metadata) return sock.sendMessage(from, { text: "❌ ID Grup tidak valid!" });
-
-            const participants = metadata.participants || [];
+        for (let p of metadata.participants) {
+            const jid = p.id;
+            if (jid.includes(sock.user.id.split(':')[0]) || db.isPushed(jid)) continue;
             
-            await sock.sendMessage(from, { 
-                text: `🚀 *Memulai Push*\nTarget: ${metadata.subject}\nTotal: ${participants.length} anggota.` 
-            });
-
-            let success = 0;
-
-            for (let participant of participants) {
-                const jid = participant.id;
-
-                // Filter: Bukan diri sendiri & Belum pernah di-push
-                const isMe = jid.includes(sock.user.id.split(':')[0]);
-                if (isMe || db.isPushed(jid)) continue; 
-
-                try {
-                    // Spintax Processing
-                    const finalMsg = pesanRaw.replace(/{([^{}]+)}/g, (m, o) => {
-                        const choices = o.split('|');
-                        return choices[Math.floor(Math.random() * choices.length)];
-                    });
-
-                    await sock.sendMessage(jid, { text: finalMsg });
-                    
-                    // Simpan ke Database
-                    db.addContact(jid); 
-
-                    success++;
-                    console.log(`✅ Push Berhasil: ${jid}`);
-
-                    // Delay Random agar lebih aman (3-6 detik)
-                    await delay(Math.floor(Math.random() * 3000) + 3000); 
-                } catch (e) {
-                    console.log(`❌ Gagal kirim ke: ${jid}`);
-                }
+            if (db.getTodayCount() >= config.maxPushDay) {
+                await sock.sendMessage(from, { text: config.msgLimit });
+                break;
             }
 
-            await sock.sendMessage(from, { 
-                text: `✅ *Push Selesai!*\nBerhasil kirim ke: ${success} nomor baru.\nGrup: ${metadata.subject}` 
-            }, { quoted: msg });
-
-        } catch (err) {
-            console.error(err);
-            await sock.sendMessage(from, { text: `❌ Terjadi kesalahan sistem.` });
+            try {
+                await sock.sendMessage(jid, { text: pesan });
+                db.addContact(jid);
+                db.incrementTodayCount();
+                await delay(Math.floor(Math.random() * (config.delay.max - config.delay.min)) + config.delay.min);
+            } catch (e) {}
         }
+        await sock.sendMessage(from, { text: config.msgDone });
     }
 };
