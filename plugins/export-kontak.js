@@ -6,6 +6,12 @@ export default {
     command: ['.vcf', '.exportvcf'],
     run: async (sock, msg, args, config) => {
         const from = msg.key.remoteJid;
+        
+        // 1. KEAMANAN OWNER
+        const sender = msg.key.participant || from;
+        const isOwner = config.owners.some(id => sender.includes(id));
+        if (!isOwner) return;
+
         const data = db.read();
         const contacts = data.pushedContacts || [];
 
@@ -14,23 +20,31 @@ export default {
         let vcfContent = "";
         
         contacts.forEach((jid, index) => {
+            // Logika deteksi yang lebih ketat
             const isLid = jid.includes('@lid');
-            // Mengambil ID (baik itu nomor 628xxx atau ID LID 102xxx)
-            const idOnly = jid.split('@')[0].split(':')[0];
+            const isRealNumber = jid.includes('@s.whatsapp.net');
             
-            // Nama urut agar rapi di kontak
-            const contactName = `Push ${index + 1} ${isLid ? '[LID]' : ''}`;
+            // Ambil ID murni (hanya angka)
+            const idOnly = jid.split('@')[0].split(':')[0].replace(/\D/g, '');
+            
+            // Penamaan Kontak
+            let contactName;
+            if (isRealNumber) {
+                contactName = `Push ${index + 1}`; // Nomor asli tanpa label [LID]
+            } else {
+                contactName = `Push ${index + 1} [LID]`;
+            }
             
             vcfContent += `BEGIN:VCARD\n`;
             vcfContent += `VERSION:3.0\n`;
             vcfContent += `FN:${contactName}\n`;
             
-            if (isLid) {
-                // Jika LID, simpan sebagai ID WhatsApp khusus
-                vcfContent += `TEL;TYPE=CELL;waid=${idOnly}:+${idOnly}\n`;
+            if (isLid && !isRealNumber) {
+                // Jika MURNI LID (tidak mengandung @s.whatsapp.net)
+                vcardContent += `TEL;TYPE=CELL;waid=${idOnly}:+${idOnly}\n`;
             } else {
-                // Jika nomor biasa
-                vcfContent += `TEL;TYPE=CELL:+${idOnly}\n`;
+                // Jika nomor asli ATAU LID yang sudah ter-update jadi nomor
+                vcfContent += `TEL;TYPE=CELL;waid=${idOnly}:+${idOnly}\n`;
             }
             
             vcfContent += `END:VCARD\n`;
@@ -43,7 +57,7 @@ export default {
             document: fs.readFileSync(fileName), 
             fileName: `Kontak_Vielx_${contacts.length}.vcf`,
             mimetype: 'text/vcard',
-            caption: `✅ *Export Selesai*\n\nTotal: ${contacts.length} kontak.\n\n_Tips: Klik file ini, pilih "Buka dengan Kontak", lalu simpan. Kamu bisa langsung chat mereka via WhatsApp._`
+            caption: `✅ *Export Selesai*\n\nTotal: ${contacts.length} kontak.\n\n_Catatan: Jika nomor sudah asli, label [LID] akan hilang otomatis._`
         }, { quoted: msg });
 
         fs.unlinkSync(fileName);
