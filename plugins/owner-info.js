@@ -1,13 +1,15 @@
-// tak kasih info siapa yang buat bot ini, biar ga bingung
+// plugins/owner-info.js
 export default {
     command: ['.owner', '.creator'],
     run: async (sock, msg, args, config) => {
         const from = msg.key.remoteJid;
-        const vcard = `BEGIN:VCARD
-VERSION:3.0
-FN:${config.ownerName}
-TEL;type=CELL;type=VOICE;waid=${config.ownerNumber}:+${config.ownerNumber}
-END:VCARD`;
+        
+        // Buat vCard yang benar menggunakan nomor HP asli
+        const vcard = 'BEGIN:VCARD\n' +
+                    'VERSION:3.0\n' +
+                    `FN:${config.ownerName}\n` +
+                    `TEL;type=CELL;type=VOICE;waid=${config.ownerNumber}:+${config.ownerNumber}\n` +
+                    'END:VCARD';
 
         await sock.sendMessage(from, {
             contacts: {
