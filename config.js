@@ -1,16 +1,13 @@
 // config.js
 
 const config = {
-    // --- KEAMANAN (MASUKKAN SEMUA ID DI SINI) ---
-    // Gunakan ini untuk cek izin akses fitur (isOwner)
+    // 1. List semua ID (Nomor, LID Grup, LID Pribadi) untuk akses fitur
     owners: ["6282133692292", "83227876290608", "101352772509932"], 
 
-    // --- INFORMASI KONTAK (HANYA NOMOR HP ASLI) ---
-    // Gunakan ini untuk fitur .owner / owner info
+    // 2. NOMOR HP ASLI (Hanya angka) untuk dikirim saat ketik .owner
     ownerNumber: "6282133692292", 
-    ownerName: "Kii",
     
-    // --- PENGATURAN BOT ---
+    ownerName: "Kii",
     botName: "Viel Bot",
     sessionName: "session_esm",     // Nama folder untuk menyimpan session login
     

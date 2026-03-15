@@ -4,8 +4,13 @@ export default {
     run: async (sock, msg, args, config) => {
         const from = msg.key.remoteJid;
         
-        // Membersihkan nomor (hanya ambil angka saja)
-        const cleanNumber = config.ownerNumber.replace(/\D/g, '');
+        // Cek jika ownerNumber ada, jika tidak ada pakai fallback nomor kosong
+        const rawNumber = config.ownerNumber || "";
+        const cleanNumber = rawNumber.replace(/\D/g, '');
+
+        if (!cleanNumber) {
+            return sock.sendMessage(from, { text: "❌ Nomor owner belum diatur di config.js" });
+        }
 
         const vcard = 'BEGIN:VCARD\n' +
                     'VERSION:3.0\n' +
