@@ -1,5 +1,6 @@
 // config.js
-
+// Script ini di buat oleh Viel, jangan di hapus credit nya ya kak 🙏
+// Untuk pertanyaan, saran, atau ingin request fitur bisa langsung DM ke Instagram saya: https://instagram.com/vieleyta_zen
 const config = {
     // 1. List semua ID (Nomor, LID Grup, LID Pribadi) untuk akses fitur
     owners: ["6282133692292", "83227876290608", "101352772509932"], 
