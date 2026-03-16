@@ -3,10 +3,10 @@
 // Untuk pertanyaan, saran, atau ingin request fitur bisa langsung DM ke Instagram saya: https://instagram.com/vieleyta_zen
 const config = {
     // 1. List semua ID (Nomor, LID Grup, LID Pribadi) untuk akses fitur
-    owners: ["6283181022601", "83227876290608", "101352772509932"], 
+    owners: ["6282133692292", "83227876290608", "101352772509932"], 
 
     // 2. NOMOR HP ASLI (Hanya angka) untuk dikirim saat ketik .owner
-    ownerNumber: "6283181022601", 
+    ownerNumber: "6282133692292", 
     
     ownerName: "Kii",
     botName: "Viel Bot",
