@@ -14,8 +14,8 @@ const config = {
     
     // --- PENGATURAN PUSH KONTAK ---
     delay: {
-        min: 7000,                  // Jeda minimal (7 detik)
-        max: 15000                  // Jeda maksimal (15 detik)
+        min: 10000,                  // Jeda minimal (10 detik)
+        max: 20000                  // Jeda maksimal (20 detik)
     },
 
     // --- SOSIAL MEDIA & TAMPILAN ---
