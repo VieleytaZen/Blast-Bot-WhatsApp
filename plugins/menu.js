@@ -6,7 +6,7 @@ import path from 'path';
 import { db } from '../database.js'; // Pastikan database di-import untuk ambil angka limit
 
 export default {
-    command: ['.menu', '.help'],
+    command: ['.help'],
     run: async (sock, msg, args, config) => {
         const from = msg.key.remoteJid;
 
